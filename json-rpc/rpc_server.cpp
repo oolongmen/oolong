@@ -344,6 +344,7 @@ int JSONRPCServer::BindTCP(int port)
             break;
         }
 
+        freeaddrinfo(res);
         return 0;
 
     } while (0);

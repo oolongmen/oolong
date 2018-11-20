@@ -6,7 +6,7 @@
 #include <string.h>
 #include <string>
 
-#include "rpc/rpc_client.h"
+#include "json-rpc/rpc_client.h"
 
 #define DLOG(fmt, ...) fprintf(stderr, fmt "\n", ##__VA_ARGS__);
 

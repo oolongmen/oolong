@@ -14,8 +14,8 @@ set(rpc_server_src
     ../oolong.h
     ../buffer/buffer.h
     ../buffer/buffer.cpp
-    ../rpc/rpc_server.h
-    ../rpc/rpc_server.cpp
+    ../json-rpc/rpc_server.h
+    ../json-rpc/rpc_server.cpp
     ./rpc-test-server.cpp)
 
 add_executable(rpc-test-server ${rpc_server_src})
@@ -26,8 +26,8 @@ set(rpc_client_src
     ../oolong.h
     ../buffer/buffer.h
     ../buffer/buffer.cpp
-    ../rpc/rpc_client.h
-    ../rpc/rpc_client.cpp
+    ../json-rpc/rpc_client.h
+    ../json-rpc/rpc_client.cpp
     ./rpc-test-client.cpp)
 
 add_executable(rpc-test-client ${rpc_client_src})
