@@ -179,7 +179,7 @@ int Client::Flush()
 {
     DLOG();
     auto &b = m_buffer[1];
-    
+
     if (b.Empty())
     {
         event_del(m_ev[1]);
@@ -324,6 +324,9 @@ int JSONRPCServer::BindTCP(int port)
                           res->ai_socktype,
                           res->ai_protocol);
 
+        if (m_socket < 0)
+            break;
+
         int opt = 1;
 
         if (setsockopt(m_socket,
@@ -414,7 +417,7 @@ int JSONRPCServer::StartListen(int worker_num)
         m_ev_base = NULL;
         return -1;
     }
-    
+
     event_add(m_ev[0], NULL);
 
     int ii = 0;
@@ -512,8 +515,11 @@ void JSONRPCServer::OnNewConn(int ,short, void *userdata)
 
     struct sockaddr_storage addr;
     socklen_t addrlen = sizeof(addr);
-    int sock = accept(server->m_socket, (struct sockaddr*) &addr, &addrlen);
-            
+
+    int sock = accept(server->m_socket,
+                      (struct sockaddr*) &addr,
+                      &addrlen);
+
     if (sock < 0)
     {
         return;

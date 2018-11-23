@@ -1,4 +1,3 @@
-
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netdb.h>
@@ -8,13 +7,14 @@
 
 #include "json-rpc/rpc_client.h"
 
-#define DLOG(fmt, ...) fprintf(stderr, fmt "\n", ##__VA_ARGS__);
+#define DLOG(fmt, ...) \
+    fprintf(stderr, fmt "\n", ##__VA_ARGS__);
 
 int main(int argc, char *argv[])
 {
     oolong::RPCClient cc;
     
-    if (cc.ConnectTCP(8899) < 0)
+    if (cc.ConnectTCP("localhost", 8899) < 0)
     {
         printf("connect failed\n");
         return -1;

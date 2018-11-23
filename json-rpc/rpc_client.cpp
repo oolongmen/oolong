@@ -4,20 +4,33 @@
 #include <unistd.h>
 #include <string.h>
 #include <string>
+#include <sys/time.h>
 
 #include "rpc_client.h"
 
 #define DLOG(fmt, ...) \
     fprintf(stderr, fmt "\n", ##__VA_ARGS__);
 
-inline nlohmann::json MakeRequest(int id,
-                                  const char *method,
-                                  const nlohmann::json &params)
+inline nlohmann::json
+MakeRequest(int id, const char *method,
+            const nlohmann::json &params)
 {
     return nlohmann::json(
             {
                 { "jsonrpc", "2.0" },
                 { "id", id },
+                { "method", method },
+                { "params", params },
+            });
+}
+
+inline nlohmann::json
+MakeNotification(const char *method,
+                 const nlohmann::json &params)
+{
+    return nlohmann::json(
+            {
+                { "jsonrpc", "2.0" },
                 { "method", method },
                 { "params", params },
             });
@@ -53,7 +66,7 @@ const char* RPCClient::Data()
     return &m_buffer[2];
 }
 
-int RPCClient::ConnectTCP(int port)
+int RPCClient::ConnectTCP(const char *host, int port)
 {
     struct addrinfo hints, *res;
 
@@ -62,7 +75,7 @@ int RPCClient::ConnectTCP(int port)
     hints.ai_family = AF_UNSPEC;
     hints.ai_socktype = SOCK_STREAM;
     
-    if (getaddrinfo("localhost",
+    if (getaddrinfo(host,
                     std::to_string(port).c_str(),
                     &hints,
                     &res) != 0)
@@ -123,25 +136,75 @@ int RPCClient::Send(const char *method, nlohmann::json &param)
     return send(m_socket, s.c_str(), s.size(), 0);
 }
 
-int RPCClient::Recv()
+int RPCClient::Recv(long timeout)
 {
     if (m_socket < 0)
         return -1;
 
     m_buffer.clear();
 
+    struct timeval tv, *ptv = NULL;
+    struct timeval now;
+
+    fd_set rfds;
+    long start = 0;
+
+    if (timeout <= 0)
+    {
+        tv.tv_sec = 0;
+        tv.tv_usec = 1000; // 1 millsec
+        ptv = &tv;
+    }
+
+    gettimeofday(&now, NULL);
+
+    start = (now.tv_sec * 1000) +
+            (now.tv_usec / 1000);
+
     while (1)
     {
-        char tmp[1024];
-        int rc = recv(m_socket, tmp, 1024, 0);
+        FD_ZERO(&rfds);
+        FD_SET(m_socket, &rfds);
+
+        int rc = select(m_socket + 1,
+                        &rfds,
+                        NULL,
+                        NULL,
+                        ptv);
 
         if (rc < 0)
         {
             return -1;
         }
+        else if (!rc)
+        {
+            long cur = 0;
+
+            gettimeofday(&now, NULL);
+
+            cur = (now.tv_sec * 1000) +
+                  (now.tv_usec / 1000);
+
+            if ((cur - start) < timeout)
+                continue;
+
+            // timeout
+            errno = ETIME;
+            return -1;
+        }
+
+        char tmp[1024];
+        rc = recv(m_socket, tmp, 1024, 0);
+
+        if (rc < 0)
+        {
+            // read error
+            return -1;
+        }
 
         if (rc == 0)
         {
+            // connection close
             errno = ECONNRESET;
             return -1;
         }
@@ -150,15 +213,20 @@ int RPCClient::Recv()
                         tmp, tmp + rc);
 
         if (m_buffer.size() < 2)
+        {
+            // no header
             continue;
+        }
 
         uint16_t datalen = ntohs(*(uint16_t*) m_buffer.data()); 
 
         if (m_buffer.size() < (datalen + 2))
         {
+            // not enuf
             continue;
         }
 
+        // got everything
         break;
     }
 

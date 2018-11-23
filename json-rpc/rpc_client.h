@@ -12,11 +12,11 @@ public:
     RPCClient();
     virtual ~RPCClient();
 
-    int ConnectTCP(int port);
+    int ConnectTCP(const char *host, int port);
 
     int Send(const char *method, nlohmann::json &param);
 
-    int Recv();
+    int Recv(long timeout /*millisec*/ = 0);
 
     int DataLength();
 
